@@ -39,21 +39,21 @@ Windows 桌面程式，查詢全部在本機離線完成，不需要網路。
 
 ## 給同仁：安裝與使用
 
-會收到兩個壓縮檔：
+會收到兩個壓縮檔（`版本` 例如 `v1.0.0`）：
 
 | 檔案 | 大小 | 內容 |
 |---|---|---|
-| `全字庫小幫手_程式.zip` | 約 16 MB | 程式本體 |
-| `全字庫小幫手_字庫cnsdata.zip` | 約 60 MB | 離線字庫（可以不裝） |
+| `cns11643-helper-版本-app.zip` | 約 16 MB | 程式本體 |
+| `cns11643-helper-版本-cnsdata.zip` | 約 60 MB | 離線字庫（可以不裝） |
 
-1. 解壓 `全字庫小幫手_程式.zip`，執行 `全字庫小幫手\全字庫小幫手.exe`。
+1. 解壓 app.zip，執行 `全字庫小幫手\全字庫小幫手.exe`。
 2. 要用離線查詢的話，把字庫 zip 解壓到**同一個位置**，`cnsdata` 資料夾會自動放到程式旁邊。
 3. 沒裝字庫也能用，但字形要從官網下載，注音、部首、部件等查詢也不能用。
 
 **收到檔案後，請先確認沒有被換掉。** 在命令提示字元執行：
 
 ```
-certutil -hashfile 全字庫小幫手_程式.zip SHA256
+certutil -hashfile cns11643-helper-v1.0.0-app.zip SHA256
 ```
 
 把算出來的結果跟承辦人另外公告的核對碼比對，一致才使用。
@@ -88,7 +88,7 @@ pyinstaller --noconfirm 全字庫小幫手.spec
 
 打包完成後：
 1. 把 `cnsdata/` 複製到 `dist/全字庫小幫手/` 裡。
-2. 分別壓縮程式（exe 和 `_internal`）與 `cnsdata`。
+2. 分別壓縮程式（exe 和 `_internal`）與 `cnsdata`，命名為 `cns11643-helper-版本-app.zip` 和 `cns11643-helper-版本-cnsdata.zip`。GitHub Release 的附件檔名不能用中文。
 3. 用 `certutil -hashfile` 算出兩個 zip 的 SHA-256，再透過公文或內部網站等**另一個管道**公告。
 
 > ⚠️ **字庫核對**：`cnsdata_manifest.py` 記錄每個字庫檔的 SHA-256，會打包進 exe。程式每次啟動都會比對，字庫被修改或版本不符，就停用離線字庫，改用線上模式。
