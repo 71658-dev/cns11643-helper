@@ -1,6 +1,13 @@
 """
 ================================================================================
 全字庫小幫手（CNS11643 Helper）
+Copyright (C) 2026 71658-dev
+SPDX-License-Identifier: GPL-3.0-or-later
+
+本程式為自由軟體：您可以依自由軟體基金會發布的 GNU 通用公眾授權條款第 3 版，
+或（依您的選擇）任何更新的版本，重新散布或修改本程式。
+本程式散布的目的是希望有用，但不提供任何擔保，亦無可售性或特定用途適用性的默示擔保。
+詳見 GNU 通用公眾授權條款（LICENSE）。原始碼：https://github.com/71658-dev/cns11643-helper
 
 用途：公文或申請書套印時，申請人姓名有電腦打不出、印不出的罕用字，
       不必安裝造字檔（EUDC），在 Word 直接貼上就能正常顯示與列印。
@@ -274,6 +281,9 @@ C_SOFT = "#F8FAFC"        # slate-50
 C_RED = "#EF4444"
 C_RED_HOVER = "#DC2626"
 C_RED_TEXT = "#B91C1C"
+APP_VERSION = "1.0.0"
+APP_AUTHOR = "71658-dev"
+PROJECT_URL = "https://github.com/71658-dev/cns11643-helper"
 FONT_UI = "Microsoft JhengHei UI"
 FONT_MONO = "Consolas"
 FONT_KAI = "標楷體"
@@ -1000,6 +1010,9 @@ class CNSRareCharApp:
         footer = tk.Frame(card, bg=C_CARD)
         footer.pack(side=tk.BOTTOM, fill=tk.X)
         self._hline(footer)
+        about = self._label(footer, "關於與授權", size=9, weight="bold", fg=C_SUBTLE, cursor="hand2")
+        about.pack(side=tk.RIGHT, padx=(0, self.px(24)))
+        about.bind("<Button-1>", lambda e: self.show_about())
         self.status_lbl = tk.Label(
             footer, textvariable=self.status_var, bg=C_CARD, fg=C_SUBTLE,
             font=(FONT_UI, 9, "bold"), anchor="w", justify="left",
@@ -3713,6 +3726,56 @@ class CNSRareCharApp:
             return False
         self.font_style_var.set(target)
         return True
+
+    def show_about(self):
+        """關於與授權：GPL-3.0 第 5 條要求互動介面顯示著作權、無擔保與授權資訊"""
+        win = getattr(self, "_about_win", None)
+        if win is not None and win.winfo_exists():
+            win.lift()
+            return
+        win = self._about_win = tk.Toplevel(self.root)
+        win.title("關於與授權")
+        win.configure(bg=C_CARD)
+        win.resizable(False, False)
+        win.transient(self.root)
+        body = tk.Frame(win, bg=C_CARD, padx=self.px(24), pady=self.px(20))
+        body.pack(fill=tk.BOTH, expand=True)
+        wrap = self.px(440)
+        self._label(body, f"全字庫小幫手 v{APP_VERSION}", size=13, weight="bold").pack(anchor="w")
+        for text, size, color, gap in (
+            (f"Copyright (C) 2026 {APP_AUTHOR}", 10, C_FG, 8),
+            ("本程式為自由軟體，免費提供，依 GNU 通用公眾授權條款第 3 版或更新版本（GPL-3.0-or-later）"
+             "授權。任何人散布本程式（包括收費散布）都必須附上完整原始碼，並沿用相同授權。", 10, C_FG, 8),
+            ("本程式不提供任何擔保，包括可售性或特定用途適用性的默示擔保。詳見授權全文。", 10, C_FG, 8),
+            ("字型與字屬性資料：數位發展部，CNS11643中文標準交換碼全字庫網站，https://www.cns11643.gov.tw。"
+             "字型採 SIL Open Font License 1.1／政府資料開放授權條款－第1版；資料採政府資料開放授權條款－第1版。",
+             9, C_MUTED, 12),
+            ("本程式非官方軟體，與數位發展部無關。", 9, C_MUTED, 4),
+        ):
+            self._label(body, text, size=size, fg=color, anchor="w", justify="left",
+                        wraplength=wrap).pack(anchor="w", fill=tk.X, pady=(self.px(gap), 0))
+
+        def open_file(name):
+            path = os.path.join(self.base_dir, name)
+            if os.path.isfile(path):
+                os.startfile(path) if os.name == "nt" else webbrowser.open(f"file://{path}")
+            else:
+                webbrowser.open(f"{PROJECT_URL}/blob/main/LICENSE")
+
+        btns = tk.Frame(body, bg=C_CARD)
+        btns.pack(anchor="w", pady=(self.px(16), 0))
+        FlatButton(btns, "原始碼 ↗", variant="outline", small=True,
+                   command=lambda: webbrowser.open(PROJECT_URL)).pack(side=tk.LEFT)
+        FlatButton(btns, "授權全文", variant="outline", small=True,
+                   command=lambda: open_file("LICENSE.txt")).pack(side=tk.LEFT, padx=(self.px(6), 0))
+        FlatButton(btns, "第三方元件授權", variant="outline", small=True,
+                   command=lambda: open_file("THIRD-PARTY-NOTICES.txt")).pack(side=tk.LEFT, padx=(self.px(6), 0))
+        FlatButton(btns, "關閉", small=True, command=win.destroy).pack(side=tk.LEFT, padx=(self.px(6), 0))
+        win.bind("<Escape>", lambda e: win.destroy())
+        win.update_idletasks()
+        x = self.root.winfo_rootx() + (self.root.winfo_width() - win.winfo_width()) // 2
+        y = self.root.winfo_rooty() + (self.root.winfo_height() - win.winfo_height()) // 3
+        win.geometry(f"+{max(0, x)}+{max(0, y)}")
 
     def open_cache_folder(self):
         """開啟本機快取資料夾"""

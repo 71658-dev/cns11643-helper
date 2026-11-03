@@ -42,3 +42,9 @@ coll = COLLECT(
     upx_exclude=[],
     name='全字庫小幫手',
 )
+
+# 授權聲明：本專案 LICENSE（GPL-3.0）與第三方元件授權全文，放在 exe 旁邊一起散布
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.join(SPECPATH, 'tools'))
+from collect_licenses import write_notices
+write_notices(_os.path.join(DISTPATH, '全字庫小幫手'))

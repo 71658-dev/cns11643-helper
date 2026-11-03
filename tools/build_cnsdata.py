@@ -1,4 +1,7 @@
 """
+Copyright (C) 2026 71658-dev
+SPDX-License-Identifier: GPL-3.0-or-later
+
 建置離線字庫資料夾 cnsdata/（只在打包前執行）
 
     python tools/build_cnsdata.py [輸出資料夾，預設為專案根目錄下的 cnsdata]
@@ -327,11 +330,17 @@ def main():
             "本資料夾內容取自：數位發展部，CNS11643中文標準交換碼全字庫網站，https://www.cns11643.gov.tw\n"
             f"字型版本：{version}；對照表版本：{maps_version}\n\n"
             "授權：\n"
-            "  - 全字庫正楷體字型（fonts/*.ttf）：SIL Open Font License 1.1，全文見 LICENSE-OFL-1.1.txt\n"
+            "  - 全字庫正楷體字型（fonts/*.ttf）：(c) 數位發展部。字型內載明可依需求擇一適用"
+            "政府資料開放授權條款-第1版或 SIL Open Font License 1.1；本資料夾依 OFL-1.1 散布，"
+            "全文見 LICENSE-OFL-1.1.txt\n"
             "  - 中文碼對照表（cns2unicode.tsv，由官網 MapingTables.zip 轉換）：政府資料開放授權條款-第1版\n"
             "  - 注音、部首、筆畫、倉頡、筆順、部件、拼音（cns_*.tsv，由官網 Properties.zip 轉換）："
             "政府資料開放授權條款-第1版\n"
             "    https://data.gov.tw/license\n"
+            "\n"
+            "授權說明頁：https://www.cns11643.gov.tw/pageView.jsp?ID=59\n"
+            "上述 tsv 檔為本專案由官網開放資料轉換格式而成（改作），內容以官網為準；"
+            "本專案為非官方工具，與數位發展部無關。\n"
         )
     with open(os.path.join(out_dir, "VERSION.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
