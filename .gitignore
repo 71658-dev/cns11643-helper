@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 打包輸出（pyinstaller）與發送用壓縮檔
+build/
+dist/
+*.zip
+
+# 離線字庫：約 114 MB，由 tools/build_cnsdata.py 從官網重新產生
+# （cnsdata_manifest.py 要提交：它是打包進 exe 的字庫核對碼）
+cnsdata/
+
+# 執行時產生的使用者資料
+cache/
+history.json
+
+# 系統與編輯器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
