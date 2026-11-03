@@ -4,6 +4,10 @@
 
 Windows 桌面程式，查詢全部在本機離線完成，不需要網路。
 
+<img width="802" height="912" alt="image" src="https://github.com/user-attachments/assets/23930f5a-3202-444f-9bc9-af271b7fe601" />
+<img width="802" height="912" alt="image" src="https://github.com/user-attachments/assets/69c16b38-75a8-4944-8607-cf5adc4b553a" />
+
+
 ## 功能
 
 ### 找字
