@@ -237,7 +237,8 @@ QUERY_MODES = [
      "url": "https://www.cns11643.gov.tw/search.jsp?ID=99"},
 ]
 Q_ALL_RADICALS, Q_ALL_STROKES = "全部部首", "全部筆畫"
-Q_MAX_ROWS = 3              # 查整個字庫時最多列 3 排字卡，避免把預覽擠到畫面外
+Q_VISIBLE_ROWS = 3          # 結果區一次顯示 3 排字卡，更多的用捲軸看（避免把預覽擠到畫面外）
+Q_MAX_RESULTS = 600         # 結果最多列出幾個字
 
 # 拼音方式：(顯示名稱, cns_pinyin.tsv 的欄位序號；None＝全部)
 PINYIN_SYSTEMS = [("全部拼音方式", None), ("漢語拼音", 1), ("注音二式", 2), ("耶魯拼音", 3),
@@ -299,6 +300,10 @@ OFFSET_MIN, OFFSET_MAX = -50, 50
 
 # 手繪造字：畫布座標系為 480×480（與設計稿一致），輸出 512×512 字圖
 PAD_UNITS = 480
+
+# 字體厚度：名稱 → 筆畫膨脹(+)／侵蝕(-)半徑（512 px 字圖上的像素數）
+WEIGHT_LEVELS = {"極細": -6, "較細": -3, "標準": 0, "較粗": 3, "粗": 6, "特粗": 10}
+WEIGHT_DEFAULT = "標準"
 PEN_OPTIONS = [("細", 10), ("中", 18), ("粗", 28)]
 PEN_DEFAULT = 18
 
@@ -815,6 +820,7 @@ class CNSRareCharApp:
         self.font_style_var = tk.StringVar(value=STYLE_KAI)
         self.font_size_var = tk.StringVar(value="20")
         self.baseline_offset_var = tk.StringVar(value="0")  # 垂直對齊微調（%，-50 ~ 50，預設 0）
+        self.weight_var = tk.StringVar(value=WEIGHT_DEFAULT)  # 字體厚度（筆畫粗細）
         self.status_var = tk.StringVar(value="就緒")
 
         # 建立 UI 介面
@@ -1191,9 +1197,18 @@ class CNSRareCharApp:
         # 查詢結果：字卡格狀排列，點選即載入
         self.q_results_wrap = tk.Frame(sec_input, bg=C_CARD)
         self.q_results_wrap.pack(fill=tk.X, pady=(self.px(12), 0))
-        self.q_grid = tk.Frame(self.q_results_wrap, bg=C_CARD)
-        self.q_grid.pack(fill=tk.X)
-        self.q_grid.bind("<Configure>", lambda e: self._layout_query_cards())
+        # 字卡放在可捲動的區塊裡：超過 Q_VISIBLE_ROWS 排時出現捲軸
+        self.q_scroll_wrap = tk.Frame(self.q_results_wrap, bg=C_CARD)
+        self.q_scroll_wrap.pack(fill=tk.X)
+        self.q_canvas = tk.Canvas(self.q_scroll_wrap, bg=C_CARD, highlightthickness=0, bd=0, height=1)
+        self.q_vsb = ttk.Scrollbar(self.q_scroll_wrap, orient="vertical", command=self.q_canvas.yview)
+        self.q_canvas.configure(yscrollcommand=self.q_vsb.set)
+        self.q_canvas.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.q_grid = tk.Frame(self.q_canvas, bg=C_CARD)
+        self.q_grid_win = self.q_canvas.create_window(0, 0, window=self.q_grid, anchor="nw")
+        self.q_canvas.bind("<Configure>", lambda e: (self.q_canvas.itemconfigure(self.q_grid_win, width=e.width),
+                                                     self._layout_query_cards()))
+        self.q_grid.bind("<Configure>", lambda e: self._sync_query_scroll())
         self.q_note_lbl = self._label(self.q_results_wrap, "", size=10, fg=C_MUTED, anchor="w", justify="left")
         self.q_note_lbl.bind("<Configure>", lambda e: self.q_note_lbl.config(wraplength=max(200, e.width)))
 
@@ -1202,12 +1217,12 @@ class CNSRareCharApp:
 
         self.settings_row = tk.Frame(sec_input, bg=C_CARD)
         self.settings_row.pack(fill=tk.X, pady=(self.px(14), 0))
-        for i in range(3):
+        for i in range(4):
             self.settings_row.columnconfigure(i, weight=1, uniform="settings")
 
         def setting(col, title, var, values, on_change):
             box = tk.Frame(self.settings_row, bg=C_CARD)
-            box.grid(row=0, column=col, sticky="ew", padx=(0 if col == 0 else self.px(6), 0 if col == 2 else self.px(6)))
+            box.grid(row=0, column=col, sticky="ew", padx=(0 if col == 0 else self.px(6), 0 if col == 3 else self.px(6)))
             self._label(box, title, size=9, weight="bold", fg=C_MUTED).pack(anchor="w", pady=(0, self.px(4)))
             combo = ttk.Combobox(box, textvariable=var, values=values, state="readonly", font=(FONT_UI, 10))
             combo.pack(fill=tk.X)
@@ -1217,9 +1232,10 @@ class CNSRareCharApp:
         setting(0, "字體", self.font_style_var, [STYLE_KAI, STYLE_SUNG], self.fetch_character)
         setting(1, "Word 字級（pt）", self.font_size_var,
                 ["12", "14", "16", "18", "20", "22", "24", "28", "36"], self._on_size_or_offset_changed)
+        setting(2, "字體厚度", self.weight_var, list(WEIGHT_LEVELS), self._on_weight_changed)
         # 垂直對齊微調：數字輸入（-50 ~ 50），右側顯示 %
         offset_box = tk.Frame(self.settings_row, bg=C_CARD)
-        offset_box.grid(row=0, column=2, sticky="ew", padx=(self.px(6), 0))
+        offset_box.grid(row=0, column=3, sticky="ew", padx=(self.px(6), 0))
         self._label(offset_box, "垂直對齊微調", size=9, weight="bold", fg=C_MUTED).pack(anchor="w", pady=(0, self.px(4)))
         ob, oi = self._bordered(offset_box, color=C_INPUT)
         ob.pack(fill=tk.X)
@@ -1462,6 +1478,14 @@ class CNSRareCharApp:
             return None                           # Treeview 自行處理捲動
         if widget is self.offset_spin:
             return None
+        w = widget
+        while w is not None and w is not self.root:
+            if w is self.q_canvas:
+                if self.q_vsb.winfo_ismapped():
+                    self.q_canvas.yview_scroll(int(-event.delta / 120) * 2, "units")
+                    return "break"
+                break
+            w = w.master
         if self.main_vsb.winfo_ismapped():
             self.main_canvas.yview_scroll(int(-event.delta / 120), "units")
         return None
@@ -1828,6 +1852,22 @@ class CNSRareCharApp:
 
     def _on_size_or_offset_changed(self):
         self.update_copy_state()
+
+    def _on_weight_changed(self):
+        self.update_preview_display()
+
+    def apply_weight(self, img: Image.Image) -> Image.Image:
+        """依「字體厚度」膨脹／侵蝕筆畫（作用於 alpha 通道）；標準時原圖返回"""
+        from PIL import ImageFilter
+        r = WEIGHT_LEVELS.get(self.weight_var.get(), 0)
+        if r == 0:
+            return img
+        alpha = img.split()[3]
+        size = abs(r) * 2 + 1
+        alpha = alpha.filter(ImageFilter.MaxFilter(size) if r > 0 else ImageFilter.MinFilter(size))
+        out = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        out.putalpha(alpha)
+        return out
 
     # --------------------------------------------------------------------------
     # 注音
@@ -2379,7 +2419,7 @@ class CNSRareCharApp:
             seen.add(ch)
             results.append({"cns": code, "char": ch, "zhuyin": zy, "sub": sub(code) if sub else code})
         notes = [n for n in (notes or []) if n]
-        limit = max(self._q_cols, 4) * Q_MAX_ROWS
+        limit = Q_MAX_RESULTS
         if len(results) > limit:
             notes.append(f"共 {len(results)} 個字，只列出前 {limit} 個；{more_hint}")
             results = results[:limit]
@@ -2585,6 +2625,8 @@ class CNSRareCharApp:
             w.destroy()
         self._q_cards = [self._make_query_card(r) for r in results]
         self._layout_query_cards(force=True)
+        self.q_canvas.yview_moveto(0)
+        self._sync_query_scroll()
         if not results and not note:
             note = "沒有符合的字，可按「到官網查詢」用全字庫完整查詢。" if self._offline_loaded() \
                 else "速查表中沒有符合的字，可按「到官網查詢」用全字庫完整查詢。"
@@ -2621,6 +2663,20 @@ class CNSRareCharApp:
             w.bind("<Leave>", lambda e: paint(C_CARD))
             w.bind("<Button-1>", lambda e, code=r["cns"]: self._pick_query_result(code))
         return border
+
+    def _sync_query_scroll(self):
+        """依字卡實際高度調整結果區高度（最多 Q_VISIBLE_ROWS 排），超過時顯示捲軸"""
+        self.q_grid.update_idletasks()
+        need = self.q_grid.winfo_reqheight()
+        row_h = self.px(100)
+        cap = row_h * Q_VISIBLE_ROWS
+        self.q_canvas.configure(height=max(1, min(need, cap)), scrollregion=(0, 0, 0, need))
+        if need > cap:
+            if not self.q_vsb.winfo_ismapped():
+                self.q_vsb.pack(side=tk.RIGHT, fill=tk.Y, before=self.q_canvas)
+        else:
+            self.q_vsb.pack_forget()
+            self.q_canvas.yview_moveto(0)
 
     def _layout_query_cards(self, force: bool = False):
         """字卡寬度至少約 84px，依可用寬度決定每列幾張"""
@@ -2739,7 +2795,7 @@ class CNSRareCharApp:
             return
 
         glyph_px = self.px(148)
-        preview_resized = self.current_pil_image.resize((glyph_px, glyph_px), Image.Resampling.LANCZOS)
+        preview_resized = self.apply_weight(self.current_pil_image).resize((glyph_px, glyph_px), Image.Resampling.LANCZOS)
         self.current_tk_image = ImageTk.PhotoImage(preview_resized)
         self.preview_canvas.create_image(self.preview_size / 2, self.preview_size / 2, image=self.current_tk_image)
         self.cns_code_lbl.config(text=self.current_cns_code)
@@ -3506,8 +3562,9 @@ class CNSRareCharApp:
         lower_pct = self.get_lower_fraction()
 
         # 將透明背景合成為純白底 512x512 PNG（20pt 時約 1843 DPI，列印邊緣銳利）
-        white_bg = Image.new("RGB", self.current_pil_image.size, (255, 255, 255))
-        white_bg.paste(self.current_pil_image, mask=self.current_pil_image.split()[3])
+        weighted = self.apply_weight(self.current_pil_image)
+        white_bg = Image.new("RGB", weighted.size, (255, 255, 255))
+        white_bg.paste(weighted, mask=weighted.split()[3])
 
         calculated_dpi = int(round(512.0 / (pt_size / 72.0)))
         png_buffer = io.BytesIO()
